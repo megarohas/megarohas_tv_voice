@@ -143,7 +143,9 @@ final class Commands {
      * playback words go to the app itself.
      */
     static String inApp(String app, String action) {
-        if (!AMTV.equals(app)) return action;
+        // likes mean nothing elsewhere, so send them on even before the box has said what's in front
+        boolean likes = "favorite".equals(action) || "unfavorite".equals(action);
+        if (!AMTV.equals(app) && !(likes && app.isEmpty())) return action;
         switch (action) {
             case "next": return "amtv:next";
             case "prev": case "nav:4": return "amtv:prev";
