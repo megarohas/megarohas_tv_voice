@@ -10,35 +10,77 @@ export PATH := $(JAVA_HOME)/bin:$(PATH)
 # Two devices on the bus → the tablet's ip:port goes in TAB (and ADB_SERIAL for adb itself)
 TAB ?= $(ADB_SERIAL)
 ADB := adb $(if $(TAB),-s $(TAB))
-BOX ?= $(TV)
 
-B   := build
-APK := $(B)/tvvoice.apk
-SRC := $(shell find src -name '*.java')
-RES := $(shell find res -type f)
+# Speech recognition: Vosk + JNA from Maven Central, Russian model from alphacephei.com
+VOSK  := 0.3.47
+JNA   := 5.13.0
+MODEL := vosk-model-small-ru-0.22
+MAVEN := https://repo1.maven.org/maven2
+JARS  := libs/vosk/classes.jar libs/jna/classes.jar
+SOS   := libs/vosk/jni/arm64-v8a/libvosk.so libs/jna/jni/arm64-v8a/libjnidispatch.so
 
-.PHONY: all install grant mictest log clean
+B     := build
+APK   := $(B)/tvvoice.apk
+SRC   := $(shell find src -name '*.java')
+RES   := $(shell find res -type f)
+FILES := /sdcard/Android/data/$(PKG)/files
+
+.PHONY: all deps install grant model start events clips mictest log clean
 
 all: $(APK)
 
-# No Gradle: aapt2 → javac → d8 → zipalign → apksigner, a few seconds end to end.
-$(APK): AndroidManifest.xml $(SRC) $(RES)
-	rm -rf $(B) && mkdir -p $(B)/classes
+# No Gradle: aapt2 → javac → d8 → native libs → zipalign → apksigner.
+$(APK): AndroidManifest.xml $(SRC) $(RES) $(JARS)
+	rm -rf $(B) && mkdir -p $(B)/classes $(B)/lib/arm64-v8a
 	$(BT)/aapt2 compile --dir res -o $(B)/res.zip
 	$(BT)/aapt2 link -I $(PLATFORM) --manifest AndroidManifest.xml -o $(B)/app.unsigned.apk $(B)/res.zip
-	javac -source 8 -target 8 -Xlint:-options -encoding UTF-8 -bootclasspath $(PLATFORM):$(BT)/core-lambda-stubs.jar -d $(B)/classes $(SRC)
-	$(BT)/d8 --release --min-api 29 --lib $(PLATFORM) --output $(B) $$(find $(B)/classes -name '*.class')
-	cd $(B) && zip -q app.unsigned.apk classes.dex
+	javac -source 8 -target 8 -Xlint:-options -encoding UTF-8 -bootclasspath $(PLATFORM):$(BT)/core-lambda-stubs.jar \
+		-classpath libs/vosk/classes.jar:libs/jna/classes.jar -d $(B)/classes $(SRC)
+	$(BT)/d8 --release --min-api 29 --lib $(PLATFORM) --output $(B) $$(find $(B)/classes -name '*.class') $(JARS)
+	cp $(SOS) $(B)/lib/arm64-v8a/
+	cd $(B) && zip -q app.unsigned.apk classes*.dex && zip -qr app.unsigned.apk lib
 	$(BT)/zipalign -f -p 4 $(B)/app.unsigned.apk $(B)/app.aligned.apk
 	$(BT)/apksigner sign --ks $(KEYSTORE) --ks-pass pass:android --ks-key-alias androiddebugkey \
 		--key-pass pass:android --out $@ $(B)/app.aligned.apk
 	@ls -lh $@
 
+deps: $(JARS) models/$(MODEL)/am/final.mdl
+
+# AARs are checked against the SHA-1 Maven Central publishes next to them.
+libs/vosk/classes.jar:
+	tools/fetch-aar.sh $(MAVEN)/com/alphacephei/vosk-android/$(VOSK)/vosk-android-$(VOSK).aar libs/vosk
+
+libs/jna/classes.jar:
+	tools/fetch-aar.sh $(MAVEN)/net/java/dev/jna/jna/$(JNA)/jna-$(JNA).aar libs/jna
+
+models/$(MODEL)/am/final.mdl:
+	mkdir -p models && curl -fL -o models/$(MODEL).zip https://alphacephei.com/vosk/models/$(MODEL).zip
+	cd models && unzip -q $(MODEL).zip && rm $(MODEL).zip
+
 install: $(APK)
 	$(ADB) install -r $(APK)
 
+# Microphone, notification, drawing over Flip Clock, no battery limits
 grant:
 	$(ADB) shell pm grant $(PKG) android.permission.RECORD_AUDIO
+	$(ADB) shell pm grant $(PKG) android.permission.POST_NOTIFICATIONS
+	$(ADB) shell appops set $(PKG) SYSTEM_ALERT_WINDOW allow
+	$(ADB) shell dumpsys deviceidle whitelist +$(PKG)
+
+# The 87 MB model goes next to the app's data, not into the APK
+model: models/$(MODEL)/am/final.mdl
+	$(ADB) shell mkdir -p $(FILES)/model
+	$(ADB) push models/$(MODEL)/. $(FILES)/model/
+
+start:
+	$(ADB) shell am start -n $(PKG)/.StartActivity
+
+# What it heard (quiet mode logs everything) and the 4-second clips around each detection
+events:
+	$(ADB) shell cat $(FILES)/events.tsv
+
+clips:
+	mkdir -p recordings/clips && $(ADB) pull $(FILES)/clips/. recordings/clips/
 
 # Phase-0 acoustics test: prompts on the tablet, TV box paused/played on marks, files → recordings/
 mictest:
