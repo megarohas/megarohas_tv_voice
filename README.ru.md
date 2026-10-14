@@ -238,3 +238,9 @@ Android 14) → телевизор Philips по HDMI-CEC; YouTube, Plex и Ки�
   встроена JNA (Apache 2.0 / LGPL 2.1).
 - Номера полей протокола Android TV Remote v2 взяты из
   [androidtvremote2](https://github.com/tronikos/androidtvremote2).
+
+## Лицензия
+
+[MIT](LICENSE). В APK планшета встроены Vosk (Apache 2.0) и JNA (Apache 2.0 /
+LGPL 2.1). Модель распознавания приложение скачивает с alphacephei.com, у неё
+тоже Apache 2.0.

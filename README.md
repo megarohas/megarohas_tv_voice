@@ -235,3 +235,9 @@ APKs are signed with a debug key.
   / LGPL 2.1) is bundled in the tablet APK.
 - Field numbers of the Android TV Remote v2 protocol come from
   [androidtvremote2](https://github.com/tronikos/androidtvremote2).
+
+## License
+
+[MIT](LICENSE). The tablet APK bundles Vosk (Apache 2.0) and JNA (Apache 2.0 /
+LGPL 2.1). The speech model is downloaded by the app from alphacephei.com, and
+it's Apache 2.0 too.
