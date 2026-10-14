@@ -30,6 +30,7 @@ import java.util.Map;
  *   /next /prev /play /pause
  *   /launch?pkg=…               open an app
  *   /search?pkg=…&q=…           search inside YouTube or VK Видео
+ *   /amtv?play=…|cmd=…          the Apple Music app (megarohas_amtv): a station / next, prev, pause…
  * Every request needs the token the Mac gave both sides (see Setup).
  */
 final class Server extends Thread {
@@ -152,6 +153,14 @@ final class Server extends Thread {
                 } else {
                     i = new Intent(Intent.ACTION_SEARCH).setPackage(pkg).putExtra(SearchManager.QUERY, text);
                 }
+                start(watcher, i);
+                return new JSONObject().put("ok", true);
+            }
+            case "/amtv": {
+                // singleTask and WebView-based (no media session): it takes its orders as extras, in onNewIntent
+                Intent i = new Intent().setClassName("com.megarohas.amtv", "com.megarohas.amtv.MainActivity");
+                if (q.containsKey("play")) i.putExtra("play", q.get("play"));
+                if (q.containsKey("cmd")) i.putExtra("cmd", q.get("cmd"));
                 start(watcher, i);
                 return new JSONObject().put("ok", true);
             }

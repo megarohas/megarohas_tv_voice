@@ -15,6 +15,7 @@ final class Store {
     static final String SLEEP_AT = "sleep_at";         // wall-clock ms to put the TV to sleep, 0 = none
     static final String SLEEP_EPISODE = "sleep_episode"; // title to sleep after, "" = none
     static final String CLIPS = "clips";               // keep 4 s of audio around each detection
+    static final String MUSIC = "music_station";       // Apple Music id for «включи музыку», "" = just open the app
 
     private Store() {
     }
@@ -34,6 +35,10 @@ final class Store {
 
     static int base(Context c) {
         return get(c).getInt(BASE, 10);
+    }
+
+    static String music(Context c) {
+        return get(c).getString(MUSIC, "");
     }
 
     static boolean clips(Context c) {

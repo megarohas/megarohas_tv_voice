@@ -458,7 +458,8 @@ public class ListenService extends Service implements TvRemote.Listener {
 
     // ---- doing ----------------------------------------------------------------
 
-    private void act(String text, final String action, String how, boolean fromBare) {
+    private void act(String text, String said, String how, boolean fromBare) {
+        final String action = Commands.inApp(tv.app, said); // «назад» in Apple Music = previous track
         long t = SystemClock.uptimeMillis();
         // both recognizers hear «пульт вниз» while the bare one listens: the same words, a moment apart
         if (action.equals(lastAction) && fromBare != lastFromBare && t - lastActionAt < 800) return;
@@ -482,7 +483,8 @@ public class ListenService extends Service implements TvRemote.Listener {
         keys.execute(() -> {
             try {
                 boolean local = action.startsWith("info") || action.startsWith("sleep:"); // no key presses
-                if (!local && !tv.ready("tv:on".equals(action) ? 8000 : 4000)) {
+                boolean waking = "tv:on".equals(action) || "music".equals(action); // the box may be asleep
+                if (!local && !tv.ready(waking ? 8000 : 4000)) {
                     overlay.show("tv:on".equals(action) ? "Приставка спит без сети — включи её пультом" : "ТВ не на связи", 2500);
                     return;
                 }
@@ -533,6 +535,13 @@ public class ListenService extends Service implements TvRemote.Listener {
                     if (tv.on) tv.key(Commands.KEY_POWER);
                 }
                 break;
+            case "music": music(); break;
+            case "amtv": {
+                JSONObject r = helper.call("/amtv", "cmd", arg);
+                if (r.has("error")) throw new IOException(r.optString("error"));
+                break;
+            }
+            case "favorite": throw new IOException("«в избранное» работает в Apple Music");
             case "launch":
                 if (helper.ok("/launch", "pkg", arg)) break;
                 if (!Commands.YOUTUBE.equals(arg)) throw new IOException("не открыть " + Commands.app(arg));
@@ -540,6 +549,27 @@ public class ListenService extends Service implements TvRemote.Listener {
                 break;
             default:
                 throw new IllegalArgumentException(action);
+        }
+    }
+
+    /** «включи музыку»: wake the box (it switches the TV on over CEC), then Apple Music with the station. */
+    private void music() throws Exception {
+        if (!tv.on) {
+            tv.key(Commands.KEY_POWER);
+            long until = SystemClock.uptimeMillis() + 10_000;
+            while (!tv.on && SystemClock.uptimeMillis() < until) SystemClock.sleep(200);
+        }
+        String station = Store.music(this);
+        for (int attempt = 1; ; attempt++) { // just woken, the box's Wi-Fi may take a moment
+            try {
+                JSONObject r = station.isEmpty() ? helper.call("/launch", "pkg", Commands.AMTV)
+                        : helper.call("/amtv", "play", station);
+                if (r.has("error")) throw new IllegalStateException(r.optString("error"));
+                return;
+            } catch (IOException e) {
+                if (attempt == 6) throw e;
+                SystemClock.sleep(2000);
+            }
         }
     }
 

@@ -11,6 +11,7 @@ import java.io.IOException;
 /**
  * Control from the Mac: adb shell am broadcast -n com.megarohas.tvvoice/.AdbControl --es <key> <value>
  *   dry true|false · base N · host IP · card true|false · clips true|false · helper_token T (make link)
+ *   music <Apple Music station id> (for «включи музыку»)
  *   pair 1 · code XXXXXX · key <keycode> · say <phrase> · link <url> · model download
  * Guarded by DUMP, which the adb shell holds and regular apps can't get.
  */
@@ -24,6 +25,7 @@ public class AdbControl extends BroadcastReceiver {
         if (i.hasExtra("host")) e.putString(Store.TV_HOST, i.getStringExtra("host"));
         if (i.hasExtra("card")) e.putBoolean(Store.CARD, Boolean.parseBoolean(i.getStringExtra("card")));
         if (i.hasExtra("clips")) e.putBoolean(Store.CLIPS, Boolean.parseBoolean(i.getStringExtra("clips")));
+        if (i.hasExtra("music")) e.putString(Store.MUSIC, i.getStringExtra("music"));
         if (i.hasExtra("helper_token")) e.putString(Store.HELPER_TOKEN, i.getStringExtra("helper_token"));
         e.apply();
         if ("download".equals(i.getStringExtra("model"))) ModelDownload.start(c); // (re)fetch over the network

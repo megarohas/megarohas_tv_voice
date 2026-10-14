@@ -16,6 +16,7 @@ final class Commands {
 
     static final String WAKE = "пульт";
     static final String YOUTUBE = "com.google.android.youtube.tv";
+    static final String AMTV = "com.megarohas.amtv"; // Apple Music for the box (github.com/megarohas/megarohas_amtv)
 
     // Android key codes (the remote protocol uses the same numbers)
     static final int KEY_DPAD_LEFT = 21, KEY_DPAD_RIGHT = 22, KEY_VOLUME_UP = 24, KEY_VOLUME_DOWN = 25,
@@ -62,8 +63,10 @@ final class Commands {
         }
         add("seekto:0", "в начало", "начни с начала", "с начала", "сначала");
         add("intro", "пропусти заставку");
-        add("next", "следующая серия");
-        add("prev", "предыдущая серия");
+        add("next", "следующая серия", "следующий трек", "дальше");
+        add("prev", "предыдущая серия", "предыдущий трек");
+        add("favorite", "добавь в избранное", "в избранное");
+        add("music", "включи музыку");
         add("info:now", "что играет", "что сейчас играет");
         add("info:left", "сколько осталось", "сколько осталось до конца");
 
@@ -93,6 +96,7 @@ final class Commands {
         app("ru.more.play", "Okko", "включи окко");
         app("com.plexapp.android", "Plex", "включи плекс");
         app("com.vk.tv", "VK Видео", "включи вк видео");
+        APPS.put(AMTV, "Apple Music");
         APPS.put("ru.rutube.app", "Rutube");
         APPS.put("org.videolan.vlc", "VLC");
 
@@ -131,6 +135,23 @@ final class Commands {
         return ACTIONS.get(phrase);
     }
 
+    /**
+     * Some words mean something else inside an app. In Apple Music (no media session,
+     * it takes extras) «назад» is the previous track rather than the Back key, and the
+     * playback words go to the app itself.
+     */
+    static String inApp(String app, String action) {
+        if (!AMTV.equals(app)) return action;
+        switch (action) {
+            case "next": return "amtv:next";
+            case "prev": case "nav:4": return "amtv:prev";
+            case "pause": return "amtv:pause";
+            case "play": return "amtv:play";
+            case "favorite": return "amtv:favorite";
+            default: return action;
+        }
+    }
+
     static String app(String pkg) {
         String name = APPS.get(pkg);
         return name != null ? name : pkg;
@@ -155,6 +176,16 @@ final class Commands {
             case "next": return "⏭  Следующая серия";
             case "prev": return "⏮  Предыдущая серия";
             case "tv": return "on".equals(arg) ? "Включаю телевизор" : "⏻  Выключаю";
+            case "music": return "🎵  Включаю музыку";
+            case "amtv":
+                switch (arg) {
+                    case "next": return "⏭  Следующий трек";
+                    case "prev": return "⏮  Предыдущий трек";
+                    case "pause": return "⏸  Пауза";
+                    case "play": return "▶  Играю";
+                    case "favorite": return "❤  В избранное";
+                    default: return "";
+                }
             case "nav": return nav(Integer.parseInt(arg));
             case "launch": return "▶  " + app(arg);
             case "search": return "🔎  Что найти?";

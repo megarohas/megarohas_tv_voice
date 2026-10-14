@@ -129,11 +129,12 @@ to 4 seconds and the command alone is enough.
 | Power | включи / выключи телевизор (or приставку) · выключи через полчаса / через час… · выключи после этой серии · отмени таймер |
 | Apps | включи ютуб · кинопоиск · окко · плекс · вк видео |
 | Search | найди на ютубе … (or pause after «найди на ютубе» and say the query) |
+| Music | включи музыку (wakes the box and starts a station in the megarohas_amtv Apple Music app) · in that app: дальше / следующий трек · назад / предыдущий трек · пауза · играй · добавь в избранное |
 
 Seek amounts: 5 to 50 seconds, полминуты, 1 to 10 minutes, then 12, 15, 20,
 25, 30, 40, 45 and 50 minutes, полчаса, час, полтора часа and два часа. Every
 seek names its direction. Bare «назад» is the Back key, and bare «вперёд» does
-nothing on purpose.
+nothing on purpose. Inside the Apple Music app «назад» means the previous track.
 
 ## Setup from a computer
 
@@ -152,6 +153,7 @@ adb -s <tablet-ip>:<port> shell am broadcast -n com.megarohas.tvvoice/.AdbContro
 | `helper_token <secret>` | Shared secret with the helper. |
 | `card true\|false` | «What's playing» strip over the clock (off by default). |
 | `clips true\|false` | Keep 4 s of audio around each detection, to study false triggers (off by default). |
+| `music <station id>` | The Apple Music station «включи музыку» starts (empty: just open the app). |
 | `say <phrase>` | Act as if «Пульт, <phrase>» was heard. |
 | `key <keycode>` | Send one key to the box. |
 | `link <url>` | Open a link on the box (YouTube, for example). |
