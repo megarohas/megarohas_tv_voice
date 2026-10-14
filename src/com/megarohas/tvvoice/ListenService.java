@@ -319,7 +319,7 @@ public class ListenService extends Service implements TvRemote.Listener {
                 String text = tail.toString();
                 String action = Commands.action(text);
                 if (text.isEmpty()) {
-                    arm();
+                    arm(secondPass(wake));
                 } else if (action != null) {
                     if (armedUntil != 0) disarm(action);
                     if (action.startsWith("search:")) search(action.substring(7), end, w, j);
@@ -334,10 +334,26 @@ public class ListenService extends Service implements TvRemote.Listener {
         }
     }
 
-    /** A lone «пульт»: mute the TV for a moment and wait for the rest. */
-    private void arm() {
+    /**
+     * What the grammar-less recognizer hears around a lone «пульт», for the log only.
+     * Look-alikes land on a lone «пульт» («пункт», «пусть», «путь», «культ» from the TV or
+     * the room), but the obvious filter — keep it only if this pass hears «пульт» too —
+     * failed on real recordings: with music playing it threw away 9 of 10 genuine ones,
+     * since one short word decodes poorly without a grammar. Collect, decide later.
+     */
+    private String secondPass(JSONObject wake) throws JSONException {
+        short[] seg = segment((long) ((wake.getDouble("start") - 0.3) * RATE), (long) ((wake.getDouble("end") + 0.3) * RATE));
+        free.reset();
+        free.acceptWaveForm(seg, seg.length);
+        String heard = text(free.getFinalResult());
+        free.reset();
+        return heard;
+    }
+
+    /** A lone «пульт»: wait a few seconds for the rest (the TV is left alone — false alarms cost nothing). */
+    private void arm(String secondPass) {
         boolean dry = Store.dry(this);
-        log(dry ? "dry-wake" : "wake", Commands.WAKE, "");
+        log(dry ? "dry-wake" : "wake", Commands.WAKE, "second pass: «" + secondPass + "»");
         clip("wake");
         if (dry) {
             overlay.show("(тихий режим) услышал «пульт»", 1500);
@@ -346,7 +362,6 @@ public class ListenService extends Service implements TvRemote.Listener {
         armedUntil = SystemClock.uptimeMillis() + 4000;
         armReset = true;
         overlay.show("🎙  Слушаю…", 4000);
-        muteToListen();
     }
 
     private void disarm(String action) {
@@ -542,6 +557,7 @@ public class ListenService extends Service implements TvRemote.Listener {
                 break;
             }
             case "favorite": throw new IOException("«в избранное» работает в Apple Music");
+            case "unfavorite": throw new IOException("«мне не нравится» работает в Apple Music");
             case "launch":
                 if (helper.ok("/launch", "pkg", arg)) break;
                 if (!Commands.YOUTUBE.equals(arg)) throw new IOException("не открыть " + Commands.app(arg));

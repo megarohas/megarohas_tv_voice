@@ -31,8 +31,9 @@ No cloud, no Google Assistant, no root.
   Sleep timer: «через час» or «после этой серии».
 - **Apps and search.** Opens YouTube, Кинопоиск, Okko, Plex and VK Видео, and
   searches YouTube by voice.
-- **Two-step mode for loud scenes.** Say «Пульт», pause, and the TV mutes for
-  a moment so the command lands in silence.
+- **Two-step mode.** Say «Пульт», pause, then the command. A lone «Пульт»
+  doesn't touch the TV, so when a look-alike from the TV («пункт», «путь»)
+  sets it off, nothing happens beyond a «Слушаю…» on the tablet.
 - **Quiet feedback.** A line drawn over whatever is on the tablet's screen
   (a clock app, say). No sounds.
 - **Quiet mode.** A new install only logs what it would have done until you
@@ -115,8 +116,8 @@ The app's status shows «Помощник на ТВ: на связи» when this
 
 ## Commands
 
-Every command starts with «Пульт, …». After a lone «Пульт» the TV mutes for up
-to 4 seconds and the command alone is enough.
+Every command starts with «Пульт, …». After a lone «Пульт» it listens for 4
+seconds and the command alone is enough.
 
 | Group | Say |
 | --- | --- |
@@ -125,11 +126,11 @@ to 4 seconds and the command alone is enough.
 | Seeking | перемотай вперёд / назад (10 s) · перемотай назад на сорок секунд · перемотай на пять минут вперёд · на минуту назад · начни с начала · пропусти заставку |
 | Episodes | следующая серия · предыдущая серия |
 | Info | что играет · сколько осталось |
-| Navigation | окей · назад · влево · вправо · вверх · вниз · домой |
+| Navigation | окей · назад · влево · вправо · вверх · вниз · домой (выйти в меню приставки, на главный экран) |
 | Power | включи / выключи телевизор (or приставку) · выключи через полчаса / через час… · выключи после этой серии · отмени таймер |
 | Apps | включи ютуб · кинопоиск · окко · плекс · вк видео |
 | Search | найди на ютубе … (or pause after «найди на ютубе» and say the query) |
-| Music | включи музыку (wakes the box and starts a station in the megarohas_amtv Apple Music app) · in that app: дальше / следующий трек · назад / предыдущий трек · пауза · играй · добавь в избранное |
+| Music | включи музыку (wakes the box and starts a station in the megarohas_amtv Apple Music app) · in that app: дальше / следующий трек · назад / предыдущий трек · пауза · играй · добавь в избранное / мне нравится · мне не нравится |
 
 Seek amounts: 5 to 50 seconds, полминуты, 1 to 10 minutes, then 12, 15, 20,
 25, 30, 40, 45 and 50 minutes, полчаса, час, полтора часа and два часа. Every

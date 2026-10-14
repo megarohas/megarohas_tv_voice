@@ -65,7 +65,8 @@ final class Commands {
         add("intro", "пропусти заставку");
         add("next", "следующая серия", "следующий трек", "дальше");
         add("prev", "предыдущая серия", "предыдущий трек");
-        add("favorite", "добавь в избранное", "в избранное");
+        add("favorite", "добавь в избранное", "в избранное", "мне нравится");
+        add("unfavorite", "мне не нравится");
         add("music", "включи музыку");
         add("info:now", "что играет", "что сейчас играет");
         add("info:left", "сколько осталось", "сколько осталось до конца");
@@ -89,7 +90,8 @@ final class Commands {
         add("nav:22", "вправо");
         add("nav:19", "вверх");
         add("nav:20", "вниз");
-        add("nav:3", "домой");
+        add("nav:3", "домой", "выйти в меню приставки", "выйди в меню", "в меню", "меню приставки",
+                "на главный экран", "на главную");
 
         app(YOUTUBE, "YouTube", "включи ютуб", "включи ютюб");
         app("ru.kinopoisk.tv", "Кинопоиск", "включи кинопоиск");
@@ -148,6 +150,7 @@ final class Commands {
             case "pause": return "amtv:pause";
             case "play": return "amtv:play";
             case "favorite": return "amtv:favorite";
+            case "unfavorite": return "amtv:unfavorite";
             default: return action;
         }
     }
@@ -184,6 +187,7 @@ final class Commands {
                     case "pause": return "⏸  Пауза";
                     case "play": return "▶  Играю";
                     case "favorite": return "❤  В избранное";
+                    case "unfavorite": return "💔  Не нравится";
                     default: return "";
                 }
             case "nav": return nav(Integer.parseInt(arg));
