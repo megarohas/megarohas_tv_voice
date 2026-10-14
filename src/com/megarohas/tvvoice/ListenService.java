@@ -568,6 +568,9 @@ public class ListenService extends Service implements TvRemote.Listener {
         }
     }
 
+    private static final java.util.Set<String> LAUNCHERS = new java.util.HashSet<>(java.util.Arrays.asList(
+            "com.google.android.apps.tv.launcherx", "com.google.android.tvlauncher"));
+
     /** «включи музыку»: wake the box (it switches the TV on over CEC), then Apple Music with the station. */
     private void music() throws Exception {
         if (!tv.on) {
@@ -575,7 +578,44 @@ public class ListenService extends Service implements TvRemote.Listener {
             long until = SystemClock.uptimeMillis() + 10_000;
             while (!tv.on && SystemClock.uptimeMillis() < until) SystemClock.sleep(200);
         }
-        String station = Store.music(this);
+        final String station = Store.music(this);
+        launchMusic(station);
+        new Thread(() -> watchMusic(station), "music-watch").start();
+    }
+
+    /**
+     * After a longer sleep Google TV puts its home screen up a few seconds after waking —
+     * on top of an app started meanwhile (2026-10-14: Apple Music got «play» and logged
+     * «left the app» two seconds later; after a 7-second sleep it didn't happen). For 20 s,
+     * when the home screen covers the music, or turns up while the music never showed,
+     * start it again: by then the app is in memory and comes up at once.
+     */
+    private void watchMusic(String station) {
+        long since = SystemClock.uptimeMillis();
+        boolean seen = false;
+        String last = "";
+        try {
+            for (int again = 0; again < 2 && SystemClock.uptimeMillis() - since < 20_000; ) {
+                SystemClock.sleep(500);
+                String app = tv.app;
+                if (!app.equals(last)) log("music-watch", Commands.app(app), ""); // what the box shows, for tuning
+                last = app;
+                if (Commands.AMTV.equals(app)) {
+                    seen = true;
+                } else if (LAUNCHERS.contains(app) && (seen || SystemClock.uptimeMillis() - since > 4000)) {
+                    again++;
+                    log("music-again", "главный экран поверх музыки", "music");
+                    launchMusic(station);
+                    seen = false;
+                    since = SystemClock.uptimeMillis();
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "music watch", e);
+        }
+    }
+
+    private void launchMusic(String station) throws Exception {
         for (int attempt = 1; ; attempt++) { // just woken, the box's Wi-Fi may take a moment
             try {
                 JSONObject r = station.isEmpty() ? helper.call("/launch", "pkg", Commands.AMTV)
