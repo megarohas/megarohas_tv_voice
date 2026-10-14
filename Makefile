@@ -49,3 +49,42 @@ log:
 
 clean:
 	rm -rf $(B)
+
+# ---- the helper on the TV box (media sessions, launching apps, search) -------
+BOX    ?= $(TV)
+BOXPKG := com.megarohas.tvhelper
+BB     := build-box
+BOXAPK := $(BB)/tvhelper.apk
+BOXSRC := $(shell find box/src -name '*.java')
+
+.PHONY: box box-install link
+
+box: $(BOXAPK)
+
+$(BOXAPK): box/AndroidManifest.xml $(BOXSRC) $(shell find box/res -type f)
+	rm -rf $(BB) && mkdir -p $(BB)/classes
+	$(BT)/aapt2 compile --dir box/res -o $(BB)/res.zip
+	$(BT)/aapt2 link -I $(PLATFORM) --manifest box/AndroidManifest.xml -o $(BB)/app.unsigned.apk $(BB)/res.zip
+	javac -source 8 -target 8 -Xlint:-options -encoding UTF-8 -bootclasspath $(PLATFORM):$(BT)/core-lambda-stubs.jar \
+		-d $(BB)/classes $(BOXSRC)
+	$(BT)/d8 --release --min-api 29 --lib $(PLATFORM) --output $(BB) $$(find $(BB)/classes -name '*.class')
+	cd $(BB) && zip -q app.unsigned.apk classes.dex
+	$(BT)/zipalign -f -p 4 $(BB)/app.unsigned.apk $(BB)/app.aligned.apk
+	$(BT)/apksigner sign --ks $(KEYSTORE) --ks-pass pass:android --ks-key-alias androiddebugkey \
+		--key-pass pass:android --out $@ $(BB)/app.aligned.apk
+	@ls -lh $@
+
+# Notification access (= other apps' media sessions), opening apps from the background, no idle limits
+box-install: $(BOXAPK)
+	@test -n "$(BOX)" || { echo "set TV=<tv-ip>:5555 (adb over the network)"; exit 1; }
+	adb -s $(BOX) install -r $(BOXAPK)
+	adb -s $(BOX) shell cmd notification allow_listener $(BOXPKG)/.MediaWatcher
+	adb -s $(BOX) shell appops set $(BOXPKG) SYSTEM_ALERT_WINDOW allow
+	adb -s $(BOX) shell dumpsys deviceidle whitelist +$(BOXPKG)
+
+# One shared secret for tablet → box requests, generated here and given to both
+link:
+	@test -n "$(BOX)" || { echo "set TV=<tv-ip>:5555 (adb over the network)"; exit 1; }
+	@tok=$$(openssl rand -hex 16); \
+	adb -s $(BOX) shell am broadcast -n $(BOXPKG)/.Setup --es token $$tok | tail -1; \
+	$(ADB) shell am broadcast -n $(PKG)/.AdbControl --es helper_token $$tok | tail -1
